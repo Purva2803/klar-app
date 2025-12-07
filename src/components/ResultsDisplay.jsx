@@ -67,7 +67,7 @@ function ResultsDisplay({ extractedText, translatedText, productInfo, detectedLa
 
     return (
       <div className="result-card">
-        <h2>Top Google Result</h2>
+        <h2>Information</h2>
         <div className="result-content">
           <div className="product-item">
             <div className="product-detail">
