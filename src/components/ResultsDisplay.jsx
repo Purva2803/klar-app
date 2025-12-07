@@ -93,14 +93,6 @@ function ResultsDisplay({ extractedText, translatedText, productInfo, detectedLa
               </div>
             )}
           </div>
-          <p style={{ 
-            marginTop: '1rem', 
-            opacity: 0.6, 
-            fontSize: '0.85rem',
-            textAlign: 'center' 
-          }}>
-            Powered by Google Search
-          </p>
         </div>
       </div>
     );
