@@ -13,8 +13,8 @@
     "maxResults": {
       "title": "Max Results",
       "type": "integer",
-      "description": "Maximum number of product pages to scrape",
-      "default": 3,
+      "description": "Maximum number of product pages to scrape (1 recommended for speed)",
+      "default": 1,
       "minimum": 1,
       "maximum": 10
     }
