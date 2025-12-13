@@ -1,0 +1,24 @@
+{
+  "title": "Klar Product Scraper Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "searchQuery": {
+      "title": "Search Query",
+      "type": "string",
+      "description": "Product name or search term to find on Google",
+      "editor": "textfield",
+      "prefill": "LANEIGE Water Sleeping Mask"
+    },
+    "maxResults": {
+      "title": "Max Results",
+      "type": "integer",
+      "description": "Maximum number of product pages to scrape",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 10
+    }
+  },
+  "required": ["searchQuery"]
+}
+

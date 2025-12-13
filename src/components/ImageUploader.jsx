@@ -1,23 +1,31 @@
 import { useState, useCallback, useRef } from 'react';
 
-function ImageUploader({ onImageUpload, isLoading, onClear }) {
-  const [preview, setPreview] = useState(null);
+function ImageUploader({ onImagesUpload, isLoading, onClear }) {
+  const [previews, setPreviews] = useState([]);
   const [isActive, setIsActive] = useState(false);
   const inputRef = useRef(null);
 
-  const handleFile = (file) => {
-    if (file && file.type.startsWith('image/')) {
-      onImageUpload(file);
+  const handleFiles = (files) => {
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    onImagesUpload(imageFiles);
+    
+    const newPreviews = [];
+    imageFiles.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreview(reader.result);
+        newPreviews.push(reader.result);
+        if (newPreviews.length === imageFiles.length) {
+          setPreviews(newPreviews);
+        }
       };
       reader.readAsDataURL(file);
-    }
+    });
   };
 
   const handleClear = () => {
-    setPreview(null);
+    setPreviews([]);
     if (inputRef.current) {
       inputRef.current.value = null;
     }
@@ -36,20 +44,18 @@ function ImageUploader({ onImageUpload, isLoading, onClear }) {
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsActive(false);
-    const file = e.dataTransfer.files[0];
-    handleFile(file);
+    handleFiles(e.dataTransfer.files);
   }, []);
 
   const handleChange = (e) => {
-    const file = e.target.files[0];
-    handleFile(file);
+    handleFiles(e.target.files);
   };
 
   return (
     <div className="upload-section">
       <label
         htmlFor="imageInput"
-        className={`upload-box ${preview ? 'has-image' : ''} ${isActive ? 'active' : ''}`}
+        className={`upload-box ${previews.length > 0 ? 'has-image' : ''} ${isActive ? 'active' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -58,13 +64,18 @@ function ImageUploader({ onImageUpload, isLoading, onClear }) {
           type="file"
           id="imageInput"
           accept="image/*"
+          multiple
           hidden
           ref={inputRef}
           onChange={handleChange}
           disabled={isLoading}
         />
-        {preview ? (
-          <img src={preview} className="preview-image show" alt="Preview" />
+        {previews.length > 0 ? (
+          <div className="previews-grid">
+            {previews.map((preview, index) => (
+              <img key={index} src={preview} className="preview-image show" alt={`Preview ${index + 1}`} />
+            ))}
+          </div>
         ) : (
           <div className="upload-content">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -72,14 +83,14 @@ function ImageUploader({ onImageUpload, isLoading, onClear }) {
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            <h3>Upload Product Image</h3>
-            <p>Click or drag an image of any skincare product</p>
+            <h3>Upload Product Images</h3>
+            <p>Click or drag images of skincare products (multiple supported)</p>
           </div>
         )}
       </label>
-      {preview && !isLoading && (
+      {previews.length > 0 && !isLoading && (
           <button onClick={handleClear} className="re-upload-btn">
-              Change Image
+              Clear All
           </button>
       )}
     </div>

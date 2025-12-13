@@ -1,0 +1,18 @@
+{
+  "name": "klar-product-scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Scrapes skincare product details from Google search results",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "apify": "^3.2.6",
+    "@crawlee/playwright": "^3.12.5",
+    "playwright": "*"
+  },
+  "author": "Klar",
+  "license": "ISC"
+}

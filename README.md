@@ -1,140 +1,96 @@
-# Klar - Skincare Scanner
+# Klar - AI-Powered Skincare Scanner
 
-Klar is a simple web tool that helps you understand skincare products from around the world. Just upload an image of a product, and it will extract the text, translate it if needed, and pull useful insights and links from the web.
-
-It's designed to make sense of products with descriptions in languages you don't understand.
+Scan any skincare product from anywhere in the world. Klar uses AI to read product labels (even in Korean, Japanese, or Chinese), translates them, finds product information, and analyzes ingredient safety.
 
 ## Features
 
--   **Multi-Language OCR**: Uses Tesseract.js to extract text in English, Korean, Japanese, Chinese, Spanish, French, German, and more.
--   **Automatic Translation**: Detects the language and translates it to English.
--   **Product Insights**: Scans Google for at-a-glance info on skin types and benefits.
--   **Top Search Results**: Displays relevant product links from Google.
--   **Responsive Design**: A clean, modern UI for desktop and mobile.
+- **AI-Powered OCR**: Uses OpenAI GPT-4 Vision to accurately read product labels
+- **Multi-Language Support**: Detects and translates 30+ languages using lingo.dev
+- **Smart Product Search**: Custom Apify actor scrapes real product pages
+- **Ingredient Safety Scanner**: Analyzes ingredients and flags concerns
+- **PWA Ready**: Installable on mobile devices
 
 ## Tech Stack
 
--   **Frontend**: React (Vite)
--   **Backend**: Node.js / Express (deployed as a Vercel Serverless Function)
--   **OCR**: Tesseract.js
--   **Translation**: Lingo.dev SDK
--   **Product Data**: Apify (Google Search Scraper)
--   **Deployment**: Vercel
+| Layer | Technology |
+|-------|------------|
+| Frontend | React + Vite |
+| OCR | OpenAI GPT-4 Vision + Tesseract.js |
+| Translation | lingo.dev |
+| Web Scraping | Apify (Custom Actor) |
+| Backend | Vercel Serverless |
 
-## How It Works
+## Quick Start
 
-1.  **Upload**: The user uploads an image of a skincare product.
-2.  **OCR**: Tesseract.js scans the image locally in the browser to extract any text. The text is cleaned to remove noise.
-3.  **Language Detection & Translation**: The extracted text is sent to a serverless backend function.
-    -   The backend uses the Lingo.dev API to detect the source language.
-    -   If the text is not English, it's translated to English.
-    -   The app includes a client-side heuristic to skip translation if the text is already likely English.
-4.  **Product Search**: The translated (or original English) text is used as a query for the Apify Google Search Scraper.
-5.  **Insight Extraction**: The app parses the titles and descriptions from the top Google search results to identify keywords related to skin types and benefits.
-6.  **Display**: The final results, including the original text, translation, product insights, and top Google links, are displayed to the user.
-
-## 🚀 Quick Start
-
-### 1. Clone or Download
+### 1. Install
 
 ```bash
-cd /Users/purva/scanz
-```
-
-### 2. Install Dependencies
-
-You'll need Node.js (version 18 or higher) installed.
-
-```bash
+git clone <repo-url>
+cd scanz
 npm install
 ```
 
-### 3. Configure API Keys
+### 2. Configure Environment
 
-Create a `.env` file in the root of the project by copying the example:
+Create `.env` file:
 
-```bash
-cp .env.example .env
+```env
+VITE_OPENAI_API_KEY=sk-...
+VITE_LINGO_API_KEY=api_...
+LINGO_API_KEY=api_...
+VITE_APIFY_API_KEY=apify_api_...
+VITE_KLAR_ACTOR=your-username~klar-product-scraper
+VITE_USE_CUSTOM_ACTOR=true
 ```
 
-Now, open `.env` and add your API keys:
-
-```
-# Lingo.dev API Key
-VITE_LINGO_API_KEY="your_lingo_api_key_here"
-
-# Apify API Key
-VITE_APIFY_API_KEY="your_apify_api_key_here"
-VITE_APIFY_ACTOR_ID="getdataforme~sephora-scraper"
-```
-
-#### Where to get API keys:
-
--   **Lingo.dev**: [https://lingo.dev/dashboard](https://lingo.dev/dashboard)
--   **Apify**: [https://console.apify.com/account/integrations](https://console.apify.com/account/integrations)
-
-### 4. Run the Development Server
+### 3. Run
 
 ```bash
 npm run dev
 ```
 
-The app will now be running at **http://localhost:5173**.
+Open http://localhost:5173
 
-## 📋 How It Works
-
-1.  **Upload Image**: The `ImageUploader` component handles the file selection.
-2.  **State Update**: React state in the main `App` component is updated.
-3.  **Analysis Triggered**: The `handleAnalysis` function orchestrates the following calls to service modules:
-    -   `performOCR()`: Extracts text using Tesseract.js.
-    -   `translateText()`: Translates the text using the `lingo.dev` SDK.
-    -   `getProductInfo()`: Runs the Apify actor to get product data.
-4.  **Display Results**: The UI re-renders reactively to show loading states, errors, or the final data in the `ResultsDisplay` component.
-
-## 🔧 Configuration
-
-### Apify Actors
-
-The app is pre-configured to use the **Sephora Scraper**. You can change the `VITE_APIFY_ACTOR_ID` in your `.env` file to use a different actor.
-
--   **Sephora Scraper**: `getdataforme~sephora-scraper`
--   **Ulta Beauty Scraper**: `getdataforme~ulta-scraper`
--   **Google Shopping Scraper**: `apify/google-shopping-scraper`
-
-### Translation Fallback
-
-If the `VITE_LINGO_API_KEY` is missing or invalid, the application will automatically use a public LibreTranslate API as a fallback to ensure it remains functional.
-
-## 📦 Project Structure
+## Project Structure
 
 ```
 scanz/
-├── public/          # Static assets
 ├── src/
-│   ├── components/  # Reusable React components
-│   │   ├── ImageUploader.jsx
-│   │   ├── LoadingSpinner.jsx
-│   │   └── ResultsDisplay.jsx
-│   ├── services/    # Modules for external APIs
-│   │   ├── apify.js
-│   │   ├── ocr.js
-│   │   └── translation.js
-│   ├── App.jsx      # Main application component
-│   ├── index.css    # Global styles
-│   └── main.jsx     # App entry point
-├── .env.example     # Environment variable template
-├── .gitignore
-├── index.html       # Main HTML template for Vite
-├── package.json
-└── README.md
+│   ├── components/       # React components
+│   ├── services/         # API integrations (OCR, translation, Apify)
+│   └── data/             # Ingredient database
+├── api/                  # Vercel serverless functions
+└── actor/                # Apify actor source code
 ```
 
-## 🎯 Available Scripts
+## Deployment
 
--   `npm run dev`: Starts the development server.
--   `npm run build`: Bundles the app for production.
--   `npm run preview`: Serves the production build locally.
+```bash
+# Frontend
+npm run build && vercel deploy
 
-## 📄 License
+# Actor
+cd actor && npx apify-cli login && npx apify-cli push
+```
 
-MIT License - Feel free to use and modify!
+## API Keys
+
+| Service | Link |
+|---------|------|
+| OpenAI | https://platform.openai.com/api-keys |
+| lingo.dev | https://lingo.dev/dashboard |
+| Apify | https://console.apify.com/account/integrations |
+
+## Custom Apify Actor
+
+The project includes a custom Apify actor for scraping product details. After deploying, view it on Apify Console:
+
+https://console.apify.com/actors
+
+## License
+
+MIT
+
+---
+
+Built using [Apify](https://apify.com) and [lingo.dev](https://lingo.dev)

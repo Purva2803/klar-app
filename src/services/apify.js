@@ -1,9 +1,24 @@
 const APIFY_API_KEY = import.meta.env.VITE_APIFY_API_KEY;
-const GOOGLE_SEARCH_ACTOR = 'apify~google-search-scraper';
+const KLAR_ACTOR = import.meta.env.VITE_KLAR_ACTOR || 'apify~google-search-scraper';
+const USE_CUSTOM_ACTOR = import.meta.env.VITE_USE_CUSTOM_ACTOR === 'true';
 
-async function waitForApifyResults(runId, maxAttempts = 15) {
+const BLOCKED_DOMAINS = [
+  'reddit.com', 'quora.com', 'community.', 'forum.',
+  'instagram.com', 'tiktok.com', 'facebook.com', 'twitter.com', 'x.com',
+  'pinterest.com', 'youtube.com', 'youtu.be',
+  'linkedin.com', 'tumblr.com', 'snapchat.com',
+  'wikipedia.org', 'wikihow.com',
+  'amazon.com/review', 'trustpilot.com'
+];
+
+function isBlockedUrl(url) {
+  if (!url) return true;
+  return BLOCKED_DOMAINS.some(domain => url.toLowerCase().includes(domain));
+}
+
+async function waitForApifyResults(runId, maxAttempts = 20) {
   for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     const response = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
       headers: { 'Authorization': `Bearer ${APIFY_API_KEY}` }
@@ -17,11 +32,48 @@ async function waitForApifyResults(runId, maxAttempts = 15) {
       });
       return await datasetResponse.json();
     } else if (data.data.status === 'FAILED' || data.data.status === 'TIMED_OUT') {
-        throw new Error(`Apify actor run failed with status: ${data.data.status}`);
+      throw new Error(`Actor run failed: ${data.data.status}`);
     }
   }
   
-  throw new Error('Timeout waiting for Apify results');
+  throw new Error('Timeout waiting for results');
+}
+
+function parseKlarResults(results) {
+  if (!results || results.length === 0) {
+    return { product: null, insights: { skinTypes: [], benefits: [] } };
+  }
+
+  const validResults = results.filter(r => !isBlockedUrl(r.url));
+  
+  if (validResults.length === 0) {
+    return { product: null, insights: { skinTypes: [], benefits: [] } };
+  }
+
+  const topResult = validResults[0];
+  
+  const allSkinTypes = new Set();
+  const allBenefits = new Set();
+  
+  validResults.forEach(result => {
+    (result.skinTypes || []).forEach(st => allSkinTypes.add(st));
+    (result.benefits || []).forEach(b => allBenefits.add(b));
+  });
+
+  return {
+    product: {
+      title: topResult.title,
+      description: topResult.description,
+      url: topResult.url,
+      ingredients: topResult.ingredients || '',
+      howToUse: topResult.howToUse || '',
+      price: topResult.price || ''
+    },
+    insights: {
+      skinTypes: [...allSkinTypes],
+      benefits: [...allBenefits]
+    }
+  };
 }
 
 function parseGoogleResults(results) {
@@ -30,13 +82,7 @@ function parseGoogleResults(results) {
   }
   
   const organicResults = results[0].organicResults || [];
-  
-  const productResults = organicResults.filter(result => 
-    result.url && 
-    !result.url.includes('reddit.com') &&
-    !result.url.includes('quora.com') &&
-    !result.url.includes('community.')
-  );
+  const productResults = organicResults.filter(result => !isBlockedUrl(result.url));
   
   if (productResults.length === 0) {
     return { product: null, insights: { skinTypes: [], benefits: [] } };
@@ -52,95 +98,120 @@ function parseGoogleResults(results) {
       description: topResult.description,
       url: topResult.url,
     },
-    insights: insights
+    insights
   };
 }
 
 function extractInsights(text) {
-    const skinTypeKeywords = ['oily', 'dry', 'combination', 'sensitive', 'normal', 'acne-prone', 'all skin types', 'mature'];
-    const benefitKeywords = [
-        'hydration', 'hydrating', 'moisture', 'moisturizing', 'brightening', 'radiance',
-        'anti-aging', 'wrinkles', 'firming', 'soothing', 'calming', 'redness',
-        'pore minimizing', 'exfoliating', 'acne', 'blemishes', 'sun protection', 'spf'
-    ];
+  const skinTypeKeywords = ['oily', 'dry', 'combination', 'sensitive', 'normal', 'acne-prone', 'all skin types', 'mature'];
+  const benefitKeywords = [
+    'hydration', 'hydrating', 'moisture', 'moisturizing', 'brightening', 'radiance',
+    'anti-aging', 'wrinkles', 'firming', 'soothing', 'calming', 'redness',
+    'pore minimizing', 'exfoliating', 'acne', 'blemishes', 'sun protection', 'spf'
+  ];
 
-    const foundSkinTypes = new Set();
-    const foundBenefits = new Set();
+  const foundSkinTypes = new Set();
+  const foundBenefits = new Set();
 
-    skinTypeKeywords.forEach(keyword => {
-        if (text.includes(keyword)) {
-            foundSkinTypes.add(keyword);
-        }
-    });
+  skinTypeKeywords.forEach(keyword => {
+    if (text.includes(keyword)) foundSkinTypes.add(keyword);
+  });
 
-    benefitKeywords.forEach(keyword => {
-        if (text.includes(keyword)) {
-            if (keyword === 'moisture' || keyword === 'moisturizing') {
-                foundBenefits.add('hydrating');
-            } else {
-                foundBenefits.add(keyword);
-            }
-        }
-    });
+  benefitKeywords.forEach(keyword => {
+    if (text.includes(keyword)) {
+      foundBenefits.add(keyword === 'moisture' || keyword === 'moisturizing' ? 'hydrating' : keyword);
+    }
+  });
 
-    return {
-        skinTypes: [...foundSkinTypes],
-        benefits: [...foundBenefits]
-    };
+  return {
+    skinTypes: [...foundSkinTypes],
+    benefits: [...foundBenefits]
+  };
 }
 
-
-export async function getProductInfo(productName) {
-  if (!APIFY_API_KEY || APIFY_API_KEY === 'YOUR_APIFY_API_KEY') {
-    throw new Error("Apify API key is not configured. Please add it to your .env file.");
-  }
-
+async function runKlarActor(searchQuery) {
   try {
-    let searchTerm = productName.split('\n')[0].substring(0, 80).trim();
-    
-    const brandPatterns = ['LANEIGE', 'Rare Beauty', 'Fenty', 'Charlotte Tilbury', 'NARS', 'MAC', 'Urban Decay', 'Too Faced', 'Benefit', 'Tatcha', 'Drunk Elephant', 'Glossier', 'Sol de Janeiro'];
-    let foundBrand = brandPatterns.find(brand => 
-      productName.toUpperCase().includes(brand.toUpperCase())
-    );
-    
-    if (foundBrand) {
-      searchTerm = foundBrand + ' ' + searchTerm.replace(new RegExp(foundBrand, 'gi'), '').trim();
-    }
-    
-    const searchQuery = `${searchTerm} skincare product`;
-
-    const runInput = {
-      "queries": searchQuery,
-      "maxPagesPerQuery": 1,
-      "resultsPerPage": 5
-    };
-    
-    const response = await fetch(`https://api.apify.com/v2/acts/${GOOGLE_SEARCH_ACTOR}/runs`, {
+    const response = await fetch(`https://api.apify.com/v2/acts/${KLAR_ACTOR}/runs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${APIFY_API_KEY}`
       },
-      body: JSON.stringify(runInput)
+      body: JSON.stringify({ searchQuery, maxResults: 3 })
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("Apify API Error:", errorBody);
-      throw new Error(`Apify API request failed with status ${response.status}.`);
-    }
+    if (!response.ok) throw new Error(`API failed: ${response.status}`);
 
     const data = await response.json();
-    
-    const runId = data.data.id;
-    const results = await waitForApifyResults(runId);
-    
-    const { product, insights } = parseGoogleResults(results);
-
-    return { product, insights };
-
-  } catch (error) {
-    console.error('Product info error:', error);
-    throw error;
+    const results = await waitForApifyResults(data.data.id);
+    return parseKlarResults(results);
+  } catch {
+    return await runGoogleSearchActor(searchQuery);
   }
+}
+
+async function runGoogleSearchActor(searchQuery) {
+  const response = await fetch(`https://api.apify.com/v2/acts/apify~google-search-scraper/runs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${APIFY_API_KEY}`
+    },
+    body: JSON.stringify({
+      queries: searchQuery + ' skincare product',
+      maxPagesPerQuery: 1,
+      resultsPerPage: 5
+    })
+  });
+
+  if (!response.ok) throw new Error(`API failed: ${response.status}`);
+
+  const data = await response.json();
+  const results = await waitForApifyResults(data.data.id);
+  return parseGoogleResults(results);
+}
+
+export async function getProductInfo(productName) {
+  if (!APIFY_API_KEY || APIFY_API_KEY === 'YOUR_APIFY_API_KEY') {
+    throw new Error("Apify API key not configured.");
+  }
+
+  let cleanedText = productName
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .replace(/\b[a-zA-Z]\b/g, '')
+    .replace(/\b\d{1,2}\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const brandPatterns = [
+    'LANEIGE', 'Rare Beauty', 'Fenty', 'Charlotte Tilbury', 'NARS', 'MAC', 
+    'Urban Decay', 'Too Faced', 'Benefit', 'Tatcha', 'Drunk Elephant', 
+    'Glossier', 'Sol de Janeiro', 'The Face Shop', 'Innisfree', 'COSRX',
+    'Cetaphil', 'CeraVe', 'La Roche', 'Neutrogena', 'Olay', 'SK-II',
+    'Clinique', 'Estee Lauder', 'Shiseido', 'Origins', 'Kiehl', 'Fresh',
+    'Sunday Riley', 'Paula', 'The Ordinary', 'Glow Recipe', 'Supergoop'
+  ];
+  
+  const foundBrand = brandPatterns.find(brand => 
+    productName.toUpperCase().includes(brand.toUpperCase())
+  );
+  
+  let searchTerm = '';
+  
+  if (foundBrand) {
+    const words = cleanedText.split(' ').filter(w => w.length > 2);
+    searchTerm = foundBrand + ' ' + words.slice(0, 5).join(' ');
+  } else {
+    const words = cleanedText.split(' ').filter(w => w.length > 3);
+    searchTerm = words.slice(0, 6).join(' ');
+  }
+  
+  if (searchTerm.length < 10) {
+    searchTerm = cleanedText.substring(0, 60);
+  }
+
+  if (USE_CUSTOM_ACTOR) {
+    return await runKlarActor(searchTerm);
+  }
+  return await runGoogleSearchActor(searchTerm);
 }
