@@ -42,7 +42,7 @@ USE_CUSTOM_ACTOR=true
 LINGO_API_KEY=api_...
 ```
 
-### 3. Run
+### 3. Run 
 
 ```bash
 npm run dev
