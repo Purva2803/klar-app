@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     
     const runInput = USE_CUSTOM_ACTOR 
       ? { searchQuery, maxResults: 3 }
-      : { queries: searchQuery + ' skincare product', maxPagesPerQuery: 1, resultsPerPage: 5 };
+      : { queries: [searchQuery + ' skincare product'], maxPagesPerQuery: 1, resultsPerPage: 5 };
 
     // Start actor run
     const runResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs`, {
