@@ -1,18 +1,25 @@
 export default async function handler(req, res) {
+  console.log('[ocr] Request received:', req.method);
+  
   if (req.method !== 'POST') {
+    console.log('[ocr] Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  console.log('[ocr] API key configured:', !!OPENAI_API_KEY);
 
   if (!OPENAI_API_KEY) {
+    console.log('[ocr] Missing OpenAI API key');
     return res.status(500).json({ error: 'OpenAI API key not configured' });
   }
 
   try {
     const { imageBase64 } = req.body;
+    console.log('[ocr] Image base64 length:', imageBase64?.length);
 
     if (!imageBase64) {
+      console.log('[ocr] No image provided');
       return res.status(400).json({ error: 'No image provided' });
     }
 
@@ -62,9 +69,11 @@ Be concise and accurate. If you cannot read something clearly, omit it.`
 
     const data = await response.json();
     const extractedText = data.choices[0]?.message?.content || '';
+    console.log('[ocr] Extracted text:', extractedText?.substring(0, 100));
 
     return res.status(200).json({ text: extractedText });
   } catch (error) {
+    console.error('[ocr] Error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 }

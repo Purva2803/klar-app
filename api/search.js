@@ -1,20 +1,30 @@
 export default async function handler(req, res) {
+  console.log('[search] Request received:', req.method);
+  console.log('[search] Request body:', JSON.stringify(req.body));
+  
   if (req.method !== 'POST') {
+    console.log('[search] Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const APIFY_API_KEY = process.env.APIFY_API_KEY;
+  const APIFY_API_KEY = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
   const KLAR_ACTOR = process.env.KLAR_ACTOR || 'apify~google-search-scraper';
   const USE_CUSTOM_ACTOR = process.env.USE_CUSTOM_ACTOR === 'true';
+  
+  console.log('[search] API key configured:', !!APIFY_API_KEY);
+  console.log('[search] Using custom actor:', USE_CUSTOM_ACTOR);
 
   if (!APIFY_API_KEY) {
+    console.log('[search] Missing Apify API key');
     return res.status(500).json({ error: 'Apify API key not configured' });
   }
 
   try {
     const { searchQuery } = req.body;
+    console.log('[search] Search query:', searchQuery);
 
     if (!searchQuery) {
+      console.log('[search] No search query provided');
       return res.status(400).json({ error: 'No search query provided' });
     }
 
@@ -23,6 +33,9 @@ export default async function handler(req, res) {
     const runInput = USE_CUSTOM_ACTOR 
       ? { searchQuery, maxResults: 3 }
       : { queries: [searchQuery + ' skincare product'], maxPagesPerQuery: 1, resultsPerPage: 5 };
+
+    console.log('[search] Actor ID:', actorId);
+    console.log('[search] Run input:', JSON.stringify(runInput));
 
     // Start actor run
     const runResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs`, {
@@ -34,13 +47,17 @@ export default async function handler(req, res) {
       body: JSON.stringify(runInput)
     });
 
+    console.log('[search] Apify response status:', runResponse.status);
+
     if (!runResponse.ok) {
       const error = await runResponse.text();
+      console.error('[search] Apify error:', error);
       return res.status(runResponse.status).json({ error });
     }
 
     const runData = await runResponse.json();
     const runId = runData.data.id;
+    console.log('[search] Run ID:', runId);
 
     // Poll for results
     for (let i = 0; i < 20; i++) {
@@ -70,8 +87,10 @@ export default async function handler(req, res) {
       }
     }
 
+    console.log('[search] Timeout waiting for results');
     return res.status(504).json({ error: 'Timeout waiting for results' });
   } catch (error) {
+    console.error('[search] Error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 }
