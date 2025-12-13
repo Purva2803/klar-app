@@ -32,11 +32,11 @@ export default async function handler(req, res) {
     const lingoDotDev = new LingoDotDevEngine({ apiKey: LINGO_API_KEY });
     
     console.log('[translate] Calling Lingo API...');
-    const translation = await lingoDotDev.localizeText({
-      content: text,
-      sourceLocale,
-      targetLocale,
-    });
+    const result = await lingoDotDev.localizeText(
+      { text },
+      { sourceLocale, targetLocale }
+    );
+    const translation = result.text;
     console.log('[translate] Translation complete, length:', translation?.length);
 
     return res.status(200).json({ translation });

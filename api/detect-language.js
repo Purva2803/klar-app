@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const lingoDotDev = new LingoDotDevEngine({ apiKey: LINGO_API_KEY });
     
     console.log('[detect-language] Calling Lingo API...');
-    const locale = await lingoDotDev.recognizeLocale({ content: text });
+    const locale = await lingoDotDev.recognizeLocale(text);
     console.log('[detect-language] Detected locale:', locale);
 
     return res.status(200).json({ locale });

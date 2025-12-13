@@ -108,8 +108,8 @@ function App() {
       <header>
         <img src={logo} alt="Klar" style={{ width: '200px', height: 'auto', marginBottom: '8px' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <img src={skinCareIcon} alt="" style={{ width: '40px', height: '40px' }} />
           <p style={{ margin: 0 }}>Scan any skincare product & get instant insights</p>
-          <img src={skinCareIcon} alt="" style={{ width: '24px', height: '24px' }} />
         </div>
       </header>
 
