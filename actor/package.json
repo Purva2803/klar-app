@@ -9,10 +9,13 @@
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
-    "apify": "^3.2.6",
     "@crawlee/playwright": "^3.12.5",
+    "apify": "^3.2.6",
     "playwright": "*"
   },
   "author": "Klar",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "apify-cli": "^1.1.1"
+  }
 }

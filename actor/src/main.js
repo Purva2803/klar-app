@@ -3,9 +3,19 @@ import { Actor } from 'apify';
 
 await Actor.init();
 
-const { searchQuery, maxResults = 3 } = (await Actor.getInput()) ?? {};
+const { searchQuery, maxResults = 1 } = (await Actor.getInput()) ?? {};
 
 if (!searchQuery) throw new Error('searchQuery is required');
+
+// Trusted domains that are fast and have good product data
+const TRUSTED_DOMAINS = [
+    'amazon.com', 'sephora.com', 'ulta.com', 'target.com', 'walmart.com',
+    'dermstore.com', 'skinstore.com', 'cultbeauty.com', 'lookfantastic.com',
+    'yesstyle.com', 'sokoglam.com', 'beautylish.com', 'nordstrom.com',
+    'macys.com', 'bloomingdales.com', 'bergdorfgoodman.com', 'saksfifthavenue.com',
+    'thefaceshop.com', 'innisfree.com', 'etudehouse.com', 'laneige.com',
+    'cosrx.com', 'paula'
+];
 
 const productUrls = [];
 const router = createPlaywrightRouter();
@@ -13,7 +23,7 @@ const router = createPlaywrightRouter();
 router.addHandler('GOOGLE', async ({ page, log }) => {
     log.info('Parsing Google search results...');
     
-    await page.waitForSelector('div#search', { timeout: 15000 }).catch(() => {});
+    await page.waitForSelector('div#search', { timeout: 10000 }).catch(() => {});
     
     const links = await page.$$eval('div#search a[href^="http"]', (anchors) => {
         const blocked = [
@@ -29,7 +39,20 @@ router.addHandler('GOOGLE', async ({ page, log }) => {
     
     const unique = [...new Set(links)];
     log.info(`Found ${unique.length} URLs`);
-    productUrls.push(...unique.slice(0, maxResults));
+    
+    // Prioritize trusted domains
+    const trusted = unique.filter(url => 
+        TRUSTED_DOMAINS.some(domain => url.toLowerCase().includes(domain))
+    );
+    const others = unique.filter(url => 
+        !TRUSTED_DOMAINS.some(domain => url.toLowerCase().includes(domain))
+    );
+    
+    // Take trusted first, then others
+    const prioritized = [...trusted, ...others];
+    log.info(`Prioritized: ${trusted.length} trusted, ${others.length} others`);
+    
+    productUrls.push(...prioritized.slice(0, maxResults));
 });
 
 router.addHandler('PRODUCT', async ({ request, page, log }) => {
@@ -92,8 +115,9 @@ const proxyConfiguration = await Actor.createProxyConfiguration().catch(() => nu
 
 const crawler = new PlaywrightCrawler({
     proxyConfiguration,
-    requestHandlerTimeoutSecs: 60,
-    navigationTimeoutSecs: 30,
+    requestHandlerTimeoutSecs: 30,  // Reduced from 60
+    navigationTimeoutSecs: 15,       // Reduced from 30
+    maxRequestRetries: 1,            // Only 1 retry instead of 3
     requestHandler: router,
     headless: true,
 });

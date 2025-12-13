@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     const actorId = USE_CUSTOM_ACTOR ? KLAR_ACTOR : 'apify~google-search-scraper';
     
     const runInput = USE_CUSTOM_ACTOR 
-      ? { searchQuery, maxResults: 3 }
+      ? { searchQuery, maxResults: 1 }  // Only scrape 1 site for speed
       : { queries: [searchQuery + ' skincare product'], maxPagesPerQuery: 1, resultsPerPage: 5 };
 
     console.log('[search] Actor ID:', actorId);
@@ -59,8 +59,8 @@ export default async function handler(req, res) {
     const runId = runData.data.id;
     console.log('[search] Run ID:', runId);
 
-    // Poll for results
-    for (let i = 0; i < 20; i++) {
+    // Poll for results (max 18 iterations × 3s = 54s to stay under Vercel's 60s limit)
+    for (let i = 0; i < 18; i++) {
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       const statusResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
@@ -68,19 +68,23 @@ export default async function handler(req, res) {
       });
 
       const statusData = await statusResponse.json();
+      console.log(`[search] Poll ${i + 1}/18: Status = ${statusData.data.status}`);
 
       if (statusData.data.status === 'SUCCEEDED') {
+        console.log('[search] Actor succeeded! Fetching results...');
         const datasetResponse = await fetch(
           `https://api.apify.com/v2/datasets/${statusData.data.defaultDatasetId}/items`,
           { headers: { 'Authorization': `Bearer ${APIFY_API_KEY}` } }
         );
         const results = await datasetResponse.json();
+        console.log('[search] Got', results.length, 'results');
         
         // Parse results
         const parsed = USE_CUSTOM_ACTOR 
           ? parseKlarResults(results)
           : parseGoogleResults(results);
         
+        console.log('[search] Parsed product:', parsed.product?.title || 'none');
         return res.status(200).json(parsed);
       } else if (statusData.data.status === 'FAILED' || statusData.data.status === 'TIMED_OUT') {
         return res.status(500).json({ error: `Actor run failed: ${statusData.data.status}` });
