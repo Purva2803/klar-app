@@ -32,15 +32,14 @@ npm install
 
 ### 2. Configure Environment
 
-Create `.env` file:
+Create `.env` file for local dev, or add to Vercel Dashboard for production:
 
 ```env
-VITE_OPENAI_API_KEY=sk-...
-VITE_LINGO_API_KEY=api_...
+OPENAI_API_KEY=sk-...
+APIFY_API_KEY=apify_api_...
+KLAR_ACTOR=your-username~klar-product-scraper
+USE_CUSTOM_ACTOR=true
 LINGO_API_KEY=api_...
-VITE_APIFY_API_KEY=apify_api_...
-VITE_KLAR_ACTOR=your-username~klar-product-scraper
-VITE_USE_CUSTOM_ACTOR=true
 ```
 
 ### 3. Run
