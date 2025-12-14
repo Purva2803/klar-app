@@ -23,12 +23,17 @@ export async function getProductInfo(productName) {
     let searchTerm = '';
 
     if (foundBrand) {
-      const words = cleanedText.split(' ').filter(w => w.length > 2);
+      // Remove brand from cleaned text to avoid duplication
+      const textWithoutBrand = cleanedText.replace(new RegExp(foundBrand, 'gi'), '').trim();
+      const words = textWithoutBrand.split(' ').filter(w => w.length > 2);
       searchTerm = foundBrand + ' ' + words.slice(0, 5).join(' ');
     } else {
       const words = cleanedText.split(' ').filter(w => w.length > 3);
       searchTerm = words.slice(0, 6).join(' ');
     }
+    
+    // Clean up any double spaces
+    searchTerm = searchTerm.replace(/\s+/g, ' ').trim();
 
     if (searchTerm.length < 10) {
       searchTerm = cleanedText.substring(0, 60);

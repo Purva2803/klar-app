@@ -5,8 +5,9 @@ import skinCareIcon from '../assets/skin-care.png';
 import beautyIcon from '../assets/beauty.png';
 import perfumeIcon from '../assets/perfume-spray.png';
 
-function ResultsDisplay({ extractedText, translatedText, productInfo, detectedLanguage, isLoadingProduct }) {
-  const languageName = getLanguageName(detectedLanguage);
+function ResultsDisplay({ extractedText, translatedText, productInfo, detectedLanguage, targetLanguage, isLoadingProduct }) {
+  const sourceLanguageName = getLanguageName(detectedLanguage);
+  const targetLanguageName = getLanguageName(targetLanguage || 'en');
   const insights = productInfo?.insights;
   const product = productInfo?.product;
   const ingredientAnalysis = analyzeIngredients(product?.ingredients || product?.description || '');
@@ -301,9 +302,9 @@ function ResultsDisplay({ extractedText, translatedText, productInfo, detectedLa
           </div>
         </div>
       )}
-      {translatedText && detectedLanguage !== 'en' && (
+      {translatedText && detectedLanguage !== targetLanguage && (
         <div className="result-card">
-          <h2>Translation ({languageName})</h2>
+          <h2>Translation ({sourceLanguageName} → {targetLanguageName})</h2>
           <div className="result-content">
             <p>{translatedText}</p>
           </div>

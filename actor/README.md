@@ -1,4 +1,4 @@
-# Klar Product Scraper 🧴
+# Klar Product Scraper
 
 A custom Apify Actor that searches Google for skincare products and scrapes detailed product information from the result pages.
 
@@ -14,8 +14,8 @@ A custom Apify Actor that searches Google for skincare products and scrapes deta
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `searchQuery` | string | ✅ | - | Product name or search term |
-| `maxResults` | integer | ❌ | 1 | Number of product pages to scrape (1-10) |
+| `searchQuery` | string | Yes | - | Product name or search term |
+| `maxResults` | integer | No | 1 | Number of product pages to scrape (1-10) |
 
 ### Example Input
 
@@ -153,8 +153,4 @@ npx apify push
 - **[Crawlee](https://crawlee.dev)** - Web scraping framework
 - **[Playwright](https://playwright.dev)** - Browser automation
 - **[Apify SDK](https://docs.apify.com/sdk/js)** - Actor framework
-
-## License
-
-ISC
 

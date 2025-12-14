@@ -6,7 +6,7 @@ import ResultsDisplay from './components/ResultsDisplay';
 import LoadingSpinner from './components/LoadingSpinner';
 
 import { performOCR } from './services/ocr';
-import { translateText, detectLanguage } from './services/translation';
+import { translateText, detectLanguage, SUPPORTED_LANGUAGES } from './services/translation';
 import { getProductInfo } from './services/apify';
 
 import logo from './assets/logo.png';
@@ -20,6 +20,7 @@ function App() {
   const [loadingText, setLoadingText] = useState('');
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [targetLanguage, setTargetLanguage] = useState('en');
 
   const handleImagesUpload = (files) => {
     setSelectedImages(files);
@@ -57,14 +58,23 @@ function App() {
         setLoadingText(`Image ${i + 1}/${selectedImages.length}: Detecting language...`);
         const lang = await detectLanguage(ocrText);
 
-        setLoadingText(`Image ${i + 1}/${selectedImages.length}: Translating...`);
-        const englishText = await translateText(ocrText, lang);
+        // Step 1: Always translate to English first (for search)
+        setLoadingText(`Image ${i + 1}/${selectedImages.length}: Translating to English...`);
+        const englishText = await translateText(ocrText, lang, 'en');
+        
+        // Step 2: If target language is not English, also translate for display
+        let displayText = englishText;
+        if (targetLanguage !== 'en') {
+          setLoadingText(`Image ${i + 1}/${selectedImages.length}: Translating to ${targetLanguage}...`);
+          displayText = await translateText(ocrText, lang, targetLanguage);
+        }
         
         // Show partial results while loading product info
         const partialResult = {
           extractedText: ocrText,
           detectedLanguage: lang,
-          translatedText: englishText,
+          translatedText: displayText,
+          targetLanguage: targetLanguage,
           productInfo: null,
           isLoadingProduct: true
         };
@@ -75,12 +85,39 @@ function App() {
         setIsLoadingProduct(true);
         setLoadingText(`Image ${i + 1}/${selectedImages.length}: Searching product...`);
         
+        // Step 3: Always search in English for best results
         const productData = await getProductInfo(englishText || ocrText);
+        
+        // Translate product info if target language is not English
+        // Smart Hybrid: Keep Title & Ingredients in English, translate Description & How to Use
+        let translatedProductInfo = productData;
+        if (targetLanguage !== 'en' && productData?.product) {
+          setLoadingText(`Image ${i + 1}/${selectedImages.length}: Translating product info...`);
+          
+          const product = productData.product;
+          const [translatedDescription, translatedHowToUse] = await Promise.all([
+            product.description ? translateText(product.description, 'en', targetLanguage) : '',
+            product.howToUse ? translateText(product.howToUse, 'en', targetLanguage) : ''
+          ]);
+          
+          translatedProductInfo = {
+            ...productData,
+            product: {
+              ...product,
+              // Keep title & ingredients in English (brand names & scientific terms)
+              title: product.title,
+              ingredients: product.ingredients,
+              // Translate description & how to use
+              description: translatedDescription || product.description,
+              howToUse: translatedHowToUse || product.howToUse
+            }
+          };
+        }
         
         // Update with full result
         allResults[i] = {
           ...partialResult,
-          productInfo: productData,
+          productInfo: translatedProductInfo,
           isLoadingProduct: false
         };
         setResults([...allResults]);
@@ -110,6 +147,18 @@ function App() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
           <img src={skinCareIcon} alt="" style={{ width: '40px', height: '40px' }} />
           <p style={{ margin: 0 }}>Scan any skincare product & get instant insights</p>
+        </div>
+        <div className="language-selector">
+          <label htmlFor="language-select">Translate to:</label>
+          <select 
+            id="language-select"
+            value={targetLanguage} 
+            onChange={(e) => setTargetLanguage(e.target.value)}
+          >
+            {SUPPORTED_LANGUAGES.map(lang => (
+              <option key={lang.code} value={lang.code}>{lang.name}</option>
+            ))}
+          </select>
         </div>
       </header>
 
@@ -159,6 +208,7 @@ function App() {
                 translatedText={result.translatedText}
                 productInfo={result.productInfo}
                 detectedLanguage={result.detectedLanguage}
+                targetLanguage={result.targetLanguage}
                 isLoadingProduct={result.isLoadingProduct}
               />
             )}
