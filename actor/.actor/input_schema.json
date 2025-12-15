@@ -1,5 +1,5 @@
 {
-  "title": "Klar Product Scraper Input",
+  "title": "Klar Skincare Scraper Input",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
@@ -17,8 +17,23 @@
       "default": 1,
       "minimum": 1,
       "maximum": 10
+    },
+    "targetLanguage": {
+      "title": "Target Language",
+      "type": "string",
+      "description": "Language code to translate results to (e.g., en, hi, es, fr, de)",
+      "default": "en",
+      "editor": "select",
+      "enum": ["en", "hi", "es", "fr", "de", "pt", "it", "ko", "ja", "zh", "ar", "ru", "th", "vi", "id", "tr", "nl", "pl", "bn", "ta", "te"],
+      "enumTitles": ["English", "Hindi", "Spanish", "French", "German", "Portuguese", "Italian", "Korean", "Japanese", "Chinese", "Arabic", "Russian", "Thai", "Vietnamese", "Indonesian", "Turkish", "Dutch", "Polish", "Bengali", "Tamil", "Telugu"]
+    },
+    "lingoApiKey": {
+      "title": "Lingo.dev API Key",
+      "type": "string",
+      "description": "Your Lingo.dev API key for translation (required if targetLanguage is not 'en')",
+      "editor": "textfield",
+      "isSecret": true
     }
   },
   "required": ["searchQuery"]
 }
-

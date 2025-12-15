@@ -1,11 +1,10 @@
 {
   "actorSpecification": 1,
-  "name": "klar-product-scraper",
-  "title": "Klar Product Scraper",
-  "description": "Searches Google for skincare products and scrapes detailed info from result pages",
+  "name": "klar-skincare-scraper",
+  "title": "Klar Skincare Scraper",
+  "description": "Searches Google for skincare products, scrapes detailed info, and translates to any language using Lingo.dev",
   "version": "1.0",
   "buildTag": "latest",
   "input": "./input_schema.json",
   "dockerfile": "./Dockerfile"
 }
-

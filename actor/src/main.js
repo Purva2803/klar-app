@@ -3,9 +3,32 @@ import { Actor } from 'apify';
 
 await Actor.init();
 
-const { searchQuery, maxResults = 1 } = (await Actor.getInput()) ?? {};
+const { searchQuery, maxResults = 1, targetLanguage = 'en', lingoApiKey } = (await Actor.getInput()) ?? {};
 
 if (!searchQuery) throw new Error('searchQuery is required');
+
+// Initialize Lingo.dev for translation if needed
+let lingoDotDev = null;
+if (targetLanguage !== 'en' && lingoApiKey) {
+    const { LingoDotDevEngine } = await import('lingo.dev/sdk');
+    lingoDotDev = new LingoDotDevEngine({ apiKey: lingoApiKey });
+}
+
+// Helper function to translate text
+async function translateText(text, targetLang) {
+    if (!text || targetLang === 'en' || !lingoDotDev) return text;
+    
+    try {
+        const result = await lingoDotDev.localizeText(
+            { text },
+            { sourceLocale: 'en', targetLocale: targetLang }
+        );
+        return result.text || text;
+    } catch (error) {
+        console.error('Translation error:', error.message);
+        return text;
+    }
+}
 
 // Trusted domains that are fast and have good product data
 const TRUSTED_DOMAINS = [
@@ -96,15 +119,31 @@ router.addHandler('PRODUCT', async ({ request, page, log }) => {
     const priceMatch = bodyText.match(/\$[\d,.]+/);
     const price = priceMatch ? priceMatch[0] : '';
     
+    // Translate description and howToUse if target language is not English
+    // Smart Hybrid: Keep title and ingredients in English
+    let translatedDescription = description;
+    let translatedHowToUse = howToUse;
+    
+    if (targetLanguage !== 'en' && lingoDotDev) {
+        log.info(`Translating to ${targetLanguage}...`);
+        [translatedDescription, translatedHowToUse] = await Promise.all([
+            translateText(description, targetLanguage),
+            translateText(howToUse, targetLanguage)
+        ]);
+    }
+    
     await Dataset.pushData({
         url: request.url,
         title: title.substring(0, 200),
-        description: description.substring(0, 500),
+        description: translatedDescription.substring(0, 500),
+        descriptionOriginal: description.substring(0, 500),
         ingredients,
-        howToUse,
+        howToUse: translatedHowToUse,
+        howToUseOriginal: howToUse,
         skinTypes: [...new Set(skinTypes)],
         benefits: [...new Set(benefits)],
         price,
+        targetLanguage,
         scrapedAt: new Date().toISOString()
     });
     
@@ -115,9 +154,9 @@ const proxyConfiguration = await Actor.createProxyConfiguration().catch(() => nu
 
 const crawler = new PlaywrightCrawler({
     proxyConfiguration,
-    requestHandlerTimeoutSecs: 30,  // Reduced from 60
-    navigationTimeoutSecs: 15,       // Reduced from 30
-    maxRequestRetries: 1,            // Only 1 retry instead of 3
+    requestHandlerTimeoutSecs: 30,
+    navigationTimeoutSecs: 15,
+    maxRequestRetries: 1,
     requestHandler: router,
     headless: true,
 });
@@ -134,6 +173,7 @@ const { items } = await dataset.getData();
 
 await Actor.setValue('OUTPUT', {
     searchQuery,
+    targetLanguage,
     totalResults: items.length,
     products: items
 });

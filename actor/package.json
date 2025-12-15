@@ -1,8 +1,8 @@
 {
-  "name": "klar-product-scraper",
+  "name": "klar-skincare-scraper",
   "version": "1.0.0",
   "type": "module",
-  "description": "Scrapes skincare product details from Google search results",
+  "description": "Scrapes skincare product details and translates to any language",
   "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js",
@@ -11,10 +11,10 @@
   "dependencies": {
     "@crawlee/playwright": "^3.12.5",
     "apify": "^3.2.6",
+    "lingo.dev": "^0.117.10",
     "playwright": "*"
   },
   "author": "Klar",
-  "license": "ISC",
   "devDependencies": {
     "apify-cli": "^1.1.1"
   }

@@ -86,38 +86,13 @@ function App() {
         setLoadingText(`Image ${i + 1}/${selectedImages.length}: Searching product...`);
         
         // Step 3: Always search in English for best results
-        const productData = await getProductInfo(englishText || ocrText);
+        // Actor will handle translation if targetLanguage is provided
+        const productData = await getProductInfo(englishText || ocrText, targetLanguage);
         
-        // Translate product info if target language is not English
-        // Smart Hybrid: Keep Title & Ingredients in English, translate Description & How to Use
-        let translatedProductInfo = productData;
-        if (targetLanguage !== 'en' && productData?.product) {
-          setLoadingText(`Image ${i + 1}/${selectedImages.length}: Translating product info...`);
-          
-          const product = productData.product;
-          const [translatedDescription, translatedHowToUse] = await Promise.all([
-            product.description ? translateText(product.description, 'en', targetLanguage) : '',
-            product.howToUse ? translateText(product.howToUse, 'en', targetLanguage) : ''
-          ]);
-          
-          translatedProductInfo = {
-            ...productData,
-            product: {
-              ...product,
-              // Keep title & ingredients in English (brand names & scientific terms)
-              title: product.title,
-              ingredients: product.ingredients,
-              // Translate description & how to use
-              description: translatedDescription || product.description,
-              howToUse: translatedHowToUse || product.howToUse
-            }
-          };
-        }
-        
-        // Update with full result
+        // Update with full result (translation already done by actor)
         allResults[i] = {
           ...partialResult,
-          productInfo: translatedProductInfo,
+          productInfo: productData,
           isLoadingProduct: false
         };
         setResults([...allResults]);

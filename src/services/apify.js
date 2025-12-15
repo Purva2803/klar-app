@@ -1,4 +1,4 @@
-export async function getProductInfo(productName) {
+export async function getProductInfo(productName, targetLanguage = 'en') {
   try {
     let cleanedText = productName
       .replace(/[^a-zA-Z0-9\s]/g, ' ')
@@ -42,7 +42,7 @@ export async function getProductInfo(productName) {
     const response = await fetch('/api/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ searchQuery: searchTerm })
+      body: JSON.stringify({ searchQuery: searchTerm, targetLanguage })
     });
 
     if (!response.ok) {

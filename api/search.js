@@ -8,11 +8,14 @@ export default async function handler(req, res) {
   }
 
   const APIFY_API_KEY = process.env.APIFY_API_KEY || process.env.VITE_APIFY_API_KEY;
-  const KLAR_ACTOR = process.env.KLAR_ACTOR || 'apify~google-search-scraper';
-  const USE_CUSTOM_ACTOR = process.env.USE_CUSTOM_ACTOR === 'true';
+  // New actor with Lingo.dev built-in
+  const KLAR_ACTOR = process.env.KLAR_ACTOR || 'inclusive_librarian/klar-skincare-scraper';
+  const LINGO_API_KEY = process.env.LINGO_API_KEY || process.env.VITE_LINGO_API_KEY;
+  const USE_CUSTOM_ACTOR = process.env.USE_CUSTOM_ACTOR !== 'false'; // Default to true
   
   console.log('[search] API key configured:', !!APIFY_API_KEY);
   console.log('[search] Using custom actor:', USE_CUSTOM_ACTOR);
+  console.log('[search] Lingo API key configured:', !!LINGO_API_KEY);
 
   if (!APIFY_API_KEY) {
     console.log('[search] Missing Apify API key');
@@ -20,18 +23,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { searchQuery } = req.body;
+    const { searchQuery, targetLanguage = 'en' } = req.body;
     console.log('[search] Search query:', searchQuery);
+    console.log('[search] Target language:', targetLanguage);
 
     if (!searchQuery) {
       console.log('[search] No search query provided');
       return res.status(400).json({ error: 'No search query provided' });
     }
 
-    const actorId = USE_CUSTOM_ACTOR ? KLAR_ACTOR : 'apify~google-search-scraper';
+    // Convert / to ~ for Apify API (API uses ~ format in URLs)
+    const actorId = USE_CUSTOM_ACTOR 
+      ? KLAR_ACTOR.replace(/\//g, '~') 
+      : 'apify~google-search-scraper';
     
     const runInput = USE_CUSTOM_ACTOR 
-      ? { searchQuery, maxResults: 1 }  // Only scrape 1 site for speed
+      ? { 
+          searchQuery, 
+          maxResults: 1,
+          targetLanguage,
+          ...(targetLanguage !== 'en' && LINGO_API_KEY && { lingoApiKey: LINGO_API_KEY })
+        }
       : { queries: [searchQuery + ' skincare product'], maxPagesPerQuery: 1, resultsPerPage: 5 };
 
     console.log('[search] Actor ID:', actorId);
@@ -116,10 +128,12 @@ function parseKlarResults(results) {
   return {
     product: {
       title: topResult.title,
-      description: topResult.description,
+      description: topResult.description || topResult.descriptionOriginal || '',
+      descriptionOriginal: topResult.descriptionOriginal || topResult.description || '',
       url: topResult.url,
       ingredients: topResult.ingredients || '',
-      howToUse: topResult.howToUse || '',
+      howToUse: topResult.howToUse || topResult.howToUseOriginal || '',
+      howToUseOriginal: topResult.howToUseOriginal || topResult.howToUse || '',
       price: topResult.price || ''
     },
     insights: {
