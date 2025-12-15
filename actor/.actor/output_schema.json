@@ -1,0 +1,20 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "Output schema of Klar Skincare Scraper",
+  "description": "Contains scraped product information with translations",
+  "properties": {
+    "products": {
+      "type": "string",
+      "title": "Products",
+      "description": "Scraped skincare product data stored in the default dataset",
+      "template": "{{links.apiDefaultDatasetUrl}}/items"
+    },
+    "summary": {
+      "type": "string",
+      "title": "Summary",
+      "description": "Run summary with search query, target language, and total results count",
+      "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/OUTPUT"
+    }
+  }
+}
+
